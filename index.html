@@ -10,6 +10,13 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <script>
+        // --- Theme Initialization (Runs instantly to prevent flash) ---
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
         tailwind.config = {
             darkMode: 'class',
             theme: {
@@ -55,7 +62,7 @@
         .mobile-menu-enter { max-height: 0; opacity: 0; overflow: hidden; transition: all 0.3s ease-out; }
         .mobile-menu-enter.open { max-height: 400px; opacity: 1; }
 
-        /* Typewriter Logic - Desktop Only */
+        /* Typewriter Logic */
         @media (min-width: 768px) {
             .typewriter-text {
                 overflow: hidden;
@@ -68,17 +75,11 @@
                 width: auto; 
             }
         }
-        
-        /* Mobile Fallback for Typewriter */
         @media (max-width: 767px) {
-            .typewriter-text {
-                white-space: normal;
-                border: none;
-                width: auto;
-            }
+            .typewriter-text { white-space: normal; border: none; width: auto; }
         }
 
-        /* Service Cards & Portfolio Cards */
+        /* Service Cards */
         .service-card, .portfolio-card { position: relative; overflow: hidden; }
         .service-card::before, .portfolio-card::before {
             content: '';
@@ -91,7 +92,7 @@
         }
         .service-card:hover::before, .portfolio-card:hover::before { transform: scale(1.1); }
         
-        /* Service Images */
+        /* Background Images */
         .service-card-ai::before { background-image: url('https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&w=1200&auto=format&fit=crop'); }
         .service-card-video::before { background-image: url('https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?q=80&w=1200&auto=format&fit=crop'); }
         .service-card-web::before { background-image: url('https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1200&auto=format&fit=crop'); }
@@ -881,7 +882,7 @@
                     <h4 class="text-white font-bold">Visit Us</h4>
                     <div class="w-full aspect-square rounded-xl overflow-hidden border border-slate-700 relative">
                          <iframe 
-                            src="https://maps.google.com/maps?q=28.6505925,77.0975105&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d14002.327599723223!2d77.08875569999999!3d28.6505925!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390d03706e2329c3%3A0x6a3746e123456789!2sPaschim%20Vihar%2C%20New%20Delhi!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"
                             width="100%" 
                             height="100%" 
                             style="border:0;" 
@@ -907,26 +908,42 @@
         // --- Routing Logic ---
         const router = {
             navigate: function(pageId) {
-                const main = document.getElementById('main-content');
-                main.style.opacity = '0';
-                
-                setTimeout(() => {
-                    document.querySelectorAll('.page-section').forEach(section => {
-                        section.classList.add('hidden');
-                    });
-                    
-                    document.getElementById(pageId).classList.remove('hidden');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                    main.style.opacity = '1';
-                    
-                    // Re-trigger animations
-                    observer.disconnect();
-                    setupAnimations();
-                    
-                    document.getElementById('mobile-menu').classList.remove('open');
-                }, 300);
+                // Update URL hash, which triggers the hashchange event automatically
+                window.location.hash = pageId;
             }
         };
+
+        // --- Handle View Changes ---
+        function handleHashChange() {
+            // Get page ID from hash (remove #) or default to 'home'
+            const hash = window.location.hash.slice(1) || 'home';
+            const main = document.getElementById('main-content');
+            
+            main.style.opacity = '0';
+            
+            setTimeout(() => {
+                // Hide all sections
+                document.querySelectorAll('.page-section').forEach(section => {
+                    section.classList.add('hidden');
+                });
+                
+                // Show target section
+                const target = document.getElementById(hash) || document.getElementById('home');
+                if(target) target.classList.remove('hidden');
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                main.style.opacity = '1';
+                
+                // Re-trigger animations
+                if(typeof observer !== 'undefined') observer.disconnect();
+                setupAnimations();
+                
+                // Close mobile menu
+                const mobileMenu = document.getElementById('mobile-menu');
+                if(mobileMenu) mobileMenu.classList.remove('open');
+                
+            }, 300);
+        }
 
         // --- Animations (Intersection Observer) ---
         let observer;
@@ -999,11 +1016,18 @@
             }
         }, 3000);
 
-        // --- Dark Mode & UI Logic ---
+        // --- Dark Mode Logic ---
         function toggleTheme() {
-            document.documentElement.classList.toggle('dark');
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+            }
         }
 
+        // --- Event Listeners ---
         document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
         document.getElementById('theme-toggle-mobile').addEventListener('click', toggleTheme);
         
@@ -1029,8 +1053,12 @@
         });
 
         // --- Initialization ---
+        // Listen for hash changes (browser back button)
+        window.addEventListener('hashchange', handleHashChange);
+
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
+            handleHashChange(); // Run on initial load to show correct page
             setupAnimations();
         });
     </script>
